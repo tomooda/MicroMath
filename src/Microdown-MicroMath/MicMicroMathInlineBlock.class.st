@@ -27,6 +27,9 @@ $f(a) = \frac{1}{2\pi i} \oint_{\gamma} \frac{f(z)}{z - a} dz$
 Class {
 	#name : 'MicMicroMathInlineBlock',
 	#superclass : 'MicInlineElement',
+	#instVars : [
+		'symbols'
+	],
 	#category : 'Microdown-MicroMath-ModelInline',
 	#package : 'Microdown-MicroMath',
 	#tag : 'ModelInline'
@@ -45,10 +48,29 @@ MicMicroMathInlineBlock >> accept: aVisitor [
 	^ aVisitor visitMicroMathInline: self
 ]
 
+{ #category : 'operations' }
+MicMicroMathInlineBlock >> cleanSubstring [
+
+	
+]
+
 { #category : 'accessing' }
 MicMicroMathInlineBlock >> closingDelimiter [
 
  	^ '=$'
+]
+
+{ #category : 'defaults' }
+MicMicroMathInlineBlock >> defaultSymbols [
+
+	^ {
+		  ('{' -> #lbrace).
+		  ('}' -> #rbrace).
+		  ('_' -> #suffix).
+		  ('^' -> #exponent).
+		  ('}/{' -> #fraction).
+		  ('&pi;' -> 'π') } asSortedCollection: [ :longer :shorter |
+		  shorter key size <= longer key size ]
 ]
 
 { #category : 'accessing' }
@@ -56,9 +78,24 @@ MicMicroMathInlineBlock >> image [
 
 	| text |
 	text := substring asText addAttribute: TextEmphasis italic.
+	^ text asMorph asForm
+]
+
+{ #category : 'processing' }
+MicMicroMathInlineBlock >> imageFromString: aString [
+
+	| text |
+	text := aString asText addAttribute: TextEmphasis italic.
 	^ text asMorph
 		  backgroundColor: Color yellow;
 		  asForm
+]
+
+{ #category : 'initialization' }
+MicMicroMathInlineBlock >> initialize [
+
+	super initialize.
+	symbols := self defaultSymbols
 ]
 
 { #category : 'accessing' }
@@ -71,4 +108,23 @@ MicMicroMathInlineBlock >> kind [
 MicMicroMathInlineBlock >> openingDelimiter [
 
  	^ '$='
+]
+
+{ #category : 'processing' }
+MicMicroMathInlineBlock >> tokenize: aString with: anotherString token: aSymbol into: aStream [
+
+	| lastIndex index |
+	lastIndex := index := 1.
+	[
+	index := aString findString: anotherString startingAt: lastIndex.
+	index > 0 ] whileTrue: [
+		(index + anotherString size - 1 <= aString size and: [
+			 (1 to: anotherString size) allSatisfy: [ :i |
+				 (aString at: index + i - 1) = (anotherString at: i) ] ]) ifTrue: [
+			(aString copyFrom: lastIndex to: index - 1) ifNotEmpty: [ :string |
+				aStream nextPut: string ].
+			aStream nextPut: aSymbol.
+			lastIndex := index + anotherString size ] ].
+	(aString copyFrom: lastIndex to: aString size) ifNotEmpty: [ :string |
+		aStream nextPut: string ]
 ]
