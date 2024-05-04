@@ -45,11 +45,6 @@ MicMicroMathInlineBlock >> accept: aVisitor [
 	^ aVisitor visitMicroMathInline: self
 ]
 
-{ #category : 'operations' }
-MicMicroMathInlineBlock >> cleanSubstring [
-	self substring: (MicInlineParser escapeReescape: self substring  except: '$$')
-]
-
 { #category : 'accessing' }
 MicMicroMathInlineBlock >> closingDelimiter [
 
