@@ -18,5 +18,25 @@ MicMicroMathInlineBlockTest >> testTokenizeWithTokenInto [
 					 with: '/-/'
 					 token: #t
 					 into: stream ])
-		equals: #( t t 'abc' t 'def' t )
+		equals: #( t t 'abc' t 'def' t ).
+	self
+		assert: (Array streamContents: [ :stream |
+				 micromath
+					 tokenize: '\/-//-/abc/\-/def\/-/'
+					 with: '/-/'
+					 token: #t
+					 into: stream ])
+		equals: #( '\/-/' t 'abc/\-/def\/-/' )
+]
+
+{ #category : 'tests' }
+MicMicroMathInlineBlockTest >> testTokens [
+
+	| micromath |
+	micromath := MicMicroMathInlineBlock new.
+	micromath substring: 'abc{def}/{x\{yz}'.
+	self assert: micromath substring equals: 'abc{def}/{x\{yz}'.
+	self
+		assert: micromath tokens
+		equals: { 'abc'. #lbrace. 'def'. #fraction. 'x{yz'. #rbrace }
 ]

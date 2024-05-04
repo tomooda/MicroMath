@@ -28,7 +28,7 @@ Class {
 	#name : 'MicMicroMathInlineBlock',
 	#superclass : 'MicInlineElement',
 	#instVars : [
-		'symbols'
+		'keywords'
 	],
 	#category : 'Microdown-MicroMath-ModelInline',
 	#package : 'Microdown-MicroMath',
@@ -61,15 +61,16 @@ MicMicroMathInlineBlock >> closingDelimiter [
 ]
 
 { #category : 'defaults' }
-MicMicroMathInlineBlock >> defaultSymbols [
+MicMicroMathInlineBlock >> defaultKeywords [
 
-	^ {
-		  ('{' -> #lbrace).
-		  ('}' -> #rbrace).
-		  ('_' -> #suffix).
-		  ('^' -> #exponent).
-		  ('}/{' -> #fraction).
-		  ('&pi;' -> 'π') } asSortedCollection: [ :longer :shorter |
+	^ ({
+		   ('{' -> #lbrace).
+		   ('}' -> #rbrace).
+		   ('_' -> #suffix).
+		   ('^' -> #exponent).
+		   ('}/{' -> #fraction) } asSortedCollection: [ :longer :shorter |
+		   shorter key size <= longer key size ]) , { ('&pi;' -> 'π') }
+		  asSortedCollection: [ :longer :shorter |
 		  shorter key size <= longer key size ]
 ]
 
@@ -95,7 +96,7 @@ MicMicroMathInlineBlock >> imageFromString: aString [
 MicMicroMathInlineBlock >> initialize [
 
 	super initialize.
-	symbols := self defaultSymbols
+	keywords := self defaultKeywords
 ]
 
 { #category : 'accessing' }
@@ -111,20 +112,54 @@ MicMicroMathInlineBlock >> openingDelimiter [
 ]
 
 { #category : 'processing' }
+MicMicroMathInlineBlock >> removeEscape: aString [
+
+	^ aString isSymbol
+		  ifTrue: [ aString ]
+		  ifFalse: [
+			  String streamContents: [ :writeStream |
+				  aString readStreamDo: [ :readStream |
+					  [ readStream atEnd ] whileFalse: [
+						  writeStream nextPutAll: (readStream upTo: $\) ] ] ] ]
+]
+
+{ #category : 'processing' }
 MicMicroMathInlineBlock >> tokenize: aString with: anotherString token: aSymbol into: aStream [
 
 	| lastIndex index |
-	lastIndex := index := 1.
+	lastIndex := 1.
+	index := 0.
 	[
-	index := aString findString: anotherString startingAt: lastIndex.
+	index := aString findString: anotherString startingAt: index + 1.
 	index > 0 ] whileTrue: [
-		(index + anotherString size - 1 <= aString size and: [
-			 (1 to: anotherString size) allSatisfy: [ :i |
-				 (aString at: index + i - 1) = (anotherString at: i) ] ]) ifTrue: [
-			(aString copyFrom: lastIndex to: index - 1) ifNotEmpty: [ :string |
-				aStream nextPut: string ].
+		(index > 1 and: [ (aString at: index - 1) = $\ ]) not ifTrue: [
+			lastIndex < index ifTrue: [
+				(aString copyFrom: lastIndex to: index - 1) ifNotEmpty: [ :string |
+					aStream nextPut: string ] ].
 			aStream nextPut: aSymbol.
 			lastIndex := index + anotherString size ] ].
 	(aString copyFrom: lastIndex to: aString size) ifNotEmpty: [ :string |
 		aStream nextPut: string ]
+]
+
+{ #category : 'processing' }
+MicMicroMathInlineBlock >> tokens [
+
+	^ (keywords inject: { self substring } into: [ :array :assoc |
+		   | substr token |
+		   substr := assoc key.
+		   token := assoc value.
+		   Array streamContents: [ :stream |
+			   array do: [ :stringOrToken |
+				   stringOrToken isSymbol
+					   ifTrue: [ stream nextPut: stringOrToken ]
+					   ifFalse: [
+						   self
+							   tokenize: stringOrToken
+							   with: substr
+							   token: token
+							   into: stream ] ] ] ]) collect: [ :stringOrToken |
+		  stringOrToken isSymbol
+			  ifTrue: [ stringOrToken ]
+			  ifFalse: [ self removeEscape: stringOrToken ] ]
 ]
