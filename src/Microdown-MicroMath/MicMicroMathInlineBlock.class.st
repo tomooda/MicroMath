@@ -29,8 +29,7 @@ Class {
 	#superclass : 'MicInlineElement',
 	#instVars : [
 		'keywords',
-		'tokenStream',
-		'imageStack'
+		'tokenStream'
 	],
 	#category : 'Microdown-MicroMath-ModelInline',
 	#package : 'Microdown-MicroMath',
@@ -40,6 +39,7 @@ Class {
 { #category : 'class initialization' }
 MicMicroMathInlineBlock class >> initialize [
 
+	MicInlineParser initialize.
 	Delimiters
 		add: MicMicroMathOpeningDelimiter markup;
 		add: MicMicroMathClosingDelimiter markup
