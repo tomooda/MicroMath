@@ -188,12 +188,9 @@ MicMicroMathInlineBlock >> imagePlain: aString [
 
 	^ aString
 		  ifNotEmpty: [
-			  (((aString asText addAttribute: TextEmphasis italic) asMorph
-				    backgroundColor: Color white;
-				    asForm) collectColors: [ :c |
-				   c = Color white
-					   ifTrue: [ Color transparent ]
-					   ifFalse: [ c ] ])
+			  ((aString asText addAttribute: TextEmphasis italic) asMorph
+				   backgroundColor: Color white;
+				   asForm)
 				  offset: 0 @ TextStyle defaultFont ascent negated;
 				  yourself ]
 		  ifEmpty: [
