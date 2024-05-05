@@ -28,7 +28,9 @@ Class {
 	#name : 'MicMicroMathInlineBlock',
 	#superclass : 'MicInlineElement',
 	#instVars : [
-		'keywords'
+		'keywords',
+		'tokenStream',
+		'imageStack'
 	],
 	#category : 'Microdown-MicroMath-ModelInline',
 	#package : 'Microdown-MicroMath',
@@ -66,30 +68,138 @@ MicMicroMathInlineBlock >> defaultKeywords [
 	^ ({
 		   ('{' -> #lbrace).
 		   ('}' -> #rbrace).
-		   ('_' -> #suffix).
-		   ('^' -> #exponent).
+		   ('_{' -> #suffix).
+		   ('^{' -> #exponent).
 		   ('}/{' -> #fraction) } asSortedCollection: [ :longer :shorter |
 		   shorter key size <= longer key size ]) , { ('&pi;' -> 'π') }
 		  asSortedCollection: [ :longer :shorter |
 		  shorter key size <= longer key size ]
 ]
 
+{ #category : 'rendering' }
+MicMicroMathInlineBlock >> emptyImage [
+
+	^ self imagePlain: ''
+]
+
 { #category : 'accessing' }
 MicMicroMathInlineBlock >> image [
 
-	| text |
-	text := substring asText addAttribute: TextEmphasis italic.
-	^ text asMorph asForm
+	^ self process
+		  offset: 0 @ 0;
+		  yourself
 ]
 
-{ #category : 'processing' }
-MicMicroMathInlineBlock >> imageFromString: aString [
+{ #category : 'rendering' }
+MicMicroMathInlineBlock >> image: form1 concatenate: form2 [
 
-	| text |
-	text := aString asText addAttribute: TextEmphasis italic.
-	^ text asMorph
-		  backgroundColor: Color yellow;
-		  asForm
+	| rect1 rect2 left top bottom right form |
+	rect1 := form1 offset extent: form1 extent.
+	rect2 := form2 offset extent: form2 extent.
+	left := rect1 left.
+	right := rect1 right + form2 width.
+	top := rect1 top min: rect2 top.
+	bottom := rect1 bottom max: rect2 bottom.
+	form := Form extent: right - left @ (bottom - top) depth: 32.
+	form offset: left @ top.
+	form getCanvas
+		fillColor: Color transparent;
+		paintImage: form1 at: form1 offset - (left @ top);
+		paintImage: form2
+		at: form2 offset - (left @ top) + (form1 width @ 0).
+	^ form
+]
+
+{ #category : 'rendering' }
+MicMicroMathInlineBlock >> image: form1 exponent: originalForm2 [
+
+	| scale form2 rect1 rect2 left top bottom right form |
+	scale := form1 height * 1.2 / originalForm2 height min: 0.8.
+	form2 := originalForm2 magnifyBy: scale.
+	rect1 := form1 offset extent: form1 extent.
+	rect2 := originalForm2 offset * 0.6 + (0 @ rect1 top) extent:
+		         form2 extent.
+	form2 offset: rect2 origin.
+	left := rect1 left.
+	right := rect1 right + form2 width.
+	top := rect1 top min: rect2 top.
+	bottom := rect1 bottom max: rect2 bottom.
+	form := Form extent: right - left @ (bottom - top) depth: 32.
+	form offset: left @ top.
+	form getCanvas
+		fillColor: Color transparent;
+		paintImage: form1 at: form1 offset - (left @ top);
+		paintImage: form2
+		at: form2 offset - (left @ top) + (form1 width @ 0).
+	^ form
+]
+
+{ #category : 'rendering' }
+MicMicroMathInlineBlock >> image: form1 fraction: form2 [
+
+	| width1 height1 width2 height2 width gapHeight form |
+	width1 := form1 width.
+	height1 := form1 height.
+	width2 := form2 width.
+	height2 := form2 height.
+	width := (width1 max: width2) + 4.
+	gapHeight := 1.
+	form := Form
+		        extent: width @ (height1 + height2 + (gapHeight * 2) + 1)
+		        depth: 32.
+	form offset: 0 @ (height1 + gapHeight + 1) negated.
+	form getCanvas
+		fillColor: Color transparent;
+		paintImage: form1 at: width - width1 // 2 @ 0;
+		line: 0 @ (height1 + gapHeight)
+		to: width @ (height1 + gapHeight)
+		width: 1
+		color: Color black;
+		paintImage: form2
+		at: width - width2 // 2 @ (height1 + gapHeight + 1 + gapHeight).
+	^ form
+]
+
+{ #category : 'rendering' }
+MicMicroMathInlineBlock >> image: form1 suffix: originalForm2 [
+
+	| form2 rect1 rect2 left top bottom right form |
+	form2 := originalForm2 magnifyBy: 0.7.
+	rect1 := form1 offset extent: form1 extent.
+	rect2 := originalForm2 offset * 0.7 + (0 @ rect1 bottom) extent:
+		         form2 extent.
+	form2 offset: rect2 origin.
+	left := rect1 left.
+	right := rect1 right + form2 width.
+	top := rect1 top min: rect2 top.
+	bottom := rect1 bottom max: rect2 bottom.
+	form := Form extent: right - left @ (bottom - top) depth: 32.
+	form offset: left @ top.
+	form getCanvas
+		fillColor: Color transparent;
+		paintImage: form1 at: form1 offset - (left @ top);
+		paintImage: form2
+		at: form2 offset - (left @ top) + (form1 width @ 0).
+	^ form
+]
+
+{ #category : 'rendering' }
+MicMicroMathInlineBlock >> imagePlain: aString [
+
+	^ aString
+		  ifNotEmpty: [
+			  (((aString asText addAttribute: TextEmphasis italic) asMorph
+				    backgroundColor: Color white;
+				    asForm) collectColors: [ :c |
+				   c = Color white
+					   ifTrue: [ Color transparent ]
+					   ifFalse: [ c ] ])
+				  offset: 0 @ TextStyle defaultFont ascent negated;
+				  yourself ]
+		  ifEmpty: [
+			  (Form extent: 0 @ TextStyle defaultFont height depth: 32)
+				  offset: 0 @ TextStyle defaultFont ascent negated;
+				  yourself ]
 ]
 
 { #category : 'initialization' }
@@ -112,6 +222,50 @@ MicMicroMathInlineBlock >> openingDelimiter [
 ]
 
 { #category : 'processing' }
+MicMicroMathInlineBlock >> process [
+
+	| image |
+	image := self emptyImage.
+	[ self tokenStream atEnd ] whileFalse: [
+		image := self processToken: self tokenStream next image: image ].
+	^ image
+]
+
+{ #category : 'processing' }
+MicMicroMathInlineBlock >> processBrace [
+
+	| image |
+	image := self emptyImage.
+	[ self tokenStream atEnd ] whileFalse: [
+		| token |
+		token := self tokenStream next.
+		token = #rbrace ifTrue: [ ^ image ].
+		token = #fraction ifTrue: [
+			| image2 |
+			image2 := self processBrace.
+			^ self image: image fraction: image2 ].
+		image := self processToken: token image: image ].
+	^ image
+]
+
+{ #category : 'processing' }
+MicMicroMathInlineBlock >> processToken: aStringOrSymbol image: aForm [
+
+	aStringOrSymbol = #lbrace ifTrue: [
+		^ self image: aForm concatenate: self processBrace ].
+	aStringOrSymbol = #rbrace ifTrue: [ ^ aForm ].
+	aStringOrSymbol = #fraction ifTrue: [
+		^ self image: aForm fraction: self processBrace ].
+	aStringOrSymbol = #suffix ifTrue: [
+		^ self image: aForm suffix: self processBrace ].
+	aStringOrSymbol = #exponent ifTrue: [
+		^ self image: aForm exponent: self processBrace ].
+	aStringOrSymbol isSymbol ifFalse: [
+		^ self image: aForm concatenate: (self imagePlain: aStringOrSymbol) ].
+	^ aForm
+]
+
+{ #category : 'processing' }
 MicMicroMathInlineBlock >> removeEscape: aString [
 
 	^ aString isSymbol
@@ -121,6 +275,12 @@ MicMicroMathInlineBlock >> removeEscape: aString [
 				  aString readStreamDo: [ :readStream |
 					  [ readStream atEnd ] whileFalse: [
 						  writeStream nextPutAll: (readStream upTo: $\) ] ] ] ]
+]
+
+{ #category : 'processing' }
+MicMicroMathInlineBlock >> tokenStream [
+
+	^ tokenStream ifNil: [ tokenStream := self tokens readStream ]
 ]
 
 { #category : 'processing' }
