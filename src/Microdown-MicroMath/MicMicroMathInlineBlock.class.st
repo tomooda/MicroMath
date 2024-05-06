@@ -4,14 +4,14 @@ MicroMath adds to Microdown supports in simple text math expressions $=ax^{2}+bx
 Here are several examples:
 
 #### Example 1
-Code: `$=V_{i} = C_{0} - C_{3}=$`
+Code: `$={V_{i}} = {C_{0}} - {C_{3}}=$`
 
-$=V_{i} = C_{0} - C_{3}=$
+$={V_{i}} = {C_{0}} - {C_{3}}=$
 
 #### Example 2
-Code: `$a^{2} + b^{2} = c^{2}$`
+Code: `$={a^{2}} + {b^{2}} = {c^{2}}=$`
 
-$a^{2} + b^{2} = c^{2}$
+$={a^{2}} + {b^{2}} = {c^{2}}=$
 
 #### Example 3
 Code: `$={a}/{b} + {{c}/{d}}/{e}=$`
