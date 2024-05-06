@@ -1,27 +1,22 @@
 "
-Microdown supports in text math expression as in LaTeX using `$ 1 + 2 $`. Each exporter is then responsible to map the contents to the correct output. For PDF based on LaTeX mathInlineBlock can contain LaTeX, for HTML we expect the same using corresponding math library in JS.
+MicroMath adds to Microdown supports in simple text math expressions $=ax^{2}+bx+c=d=$.
 
 Here are several examples:
 
 #### Example 1
-Code: `$V_i = C_0 - C_3$`
+Code: `$=V_{i} = C_{0} - C_{3}=$`
 
-$V_i = C_0 - C_3$
+$=V_{i} = C_{0} - C_{3}=$
 
 #### Example 2
-Code: `$a^2 + b^2 = c^2$`
+Code: `$a^{2} + b^{2} = c^{2}$`
 
-$a^2 + b^2 = c^2$
+$a^{2} + b^{2} = c^{2}$
 
 #### Example 3
-Code: `$\sin(x) = \sum_{n=0}^{\infty} \frac{(-1)^{n}x^{2n+1}}{(2n+1)!}$`
+Code: `$={a}/{b} + {{c}/{d}}/{e}=$`
 
-$\sin(x) = \sum_{n=0}^{\infty} \frac{(-1)^{n}x^{2n+1}}{(2n+1)!}$
-
-#### Example 4
-Code: `$f(a) = \frac{1}{2\pi i} \oint_{\gamma} \frac{f(z)}{z - a} dz$`
-
-$f(a) = \frac{1}{2\pi i} \oint_{\gamma} \frac{f(z)}{z - a} dz$
+$={a}/{b} + {{c}/{d}}/{e}=$
 
 "
 Class {
@@ -225,7 +220,10 @@ MicMicroMathInlineBlock >> process [
 	image := self emptyImage.
 	[ self tokenStream atEnd ] whileFalse: [
 		image := self processToken: self tokenStream next image: image ].
-	^ image
+	^ image collectColors: [ :c |
+		  c = Color white
+			  ifTrue: [ Color transparent ]
+			  ifFalse: [ c ] ]
 ]
 
 { #category : 'processing' }
