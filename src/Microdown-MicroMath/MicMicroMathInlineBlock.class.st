@@ -18,6 +18,11 @@ Code: `$={a}/{b} + {{c}/{d}}/{e}=$`
 
 $={a}/{b} + {{c}/{d}}/{e}=$
 
+#### Example 4
+Code: `$=x={b &plusminus; &sqrt;{b^{2}-4ac}}/{2a}=$`
+
+$=x={b &plusminus; &sqrt;{b^{2}-4ac}}/{2a}=$
+
 "
 Class {
 	#name : 'MicMicroMathInlineBlock',
@@ -66,9 +71,11 @@ MicMicroMathInlineBlock >> defaultKeywords [
 		   ('}' -> #rbrace).
 		   ('_{' -> #suffix).
 		   ('^{' -> #exponent).
-		   ('}/{' -> #fraction) } asSortedCollection: [ :longer :shorter |
-		   shorter key size <= longer key size ]) , { ('&pi;' -> 'π') }
-		  asSortedCollection: [ :longer :shorter |
+		   ('}/{' -> #fraction).
+		   ('&sqrt;' -> #sqrt) } asSortedCollection: [ :longer :shorter |
+		   shorter key size <= longer key size ]) , {
+		  ('&pi;' -> 'π').
+		  ('&plusminus;' -> '±') } asSortedCollection: [ :longer :shorter |
 		  shorter key size <= longer key size ]
 ]
 
@@ -116,24 +123,18 @@ MicMicroMathInlineBlock >> image: form1 concatenate: form2 [
 { #category : 'rendering' }
 MicMicroMathInlineBlock >> image: form1 exponent: originalForm2 [
 
-	| scale form2 rect1 rect2 left top bottom right form |
+	| scale form2 gap form |
 	scale := form1 height * 1.2 / originalForm2 height min: 0.8.
 	form2 := originalForm2 magnifyBy: scale.
-	rect1 := form1 offset extent: form1 extent.
-	rect2 := originalForm2 offset * 0.6 + (0 @ rect1 top) extent:
-		         form2 extent.
-	form2 offset: rect2 origin.
-	left := rect1 left.
-	right := rect1 right + form2 width.
-	top := rect1 top min: rect2 top.
-	bottom := rect1 bottom max: rect2 bottom.
-	form := Form extent: right - left @ (bottom - top) depth: 32.
-	form offset: left @ top.
+	gap := form2 height * 0.5.
+	form := Form
+		        extent: form1 width + form2 width @ (form1 height + gap)
+		        depth: 32.
+	form offset: 0 @ (form1 offset y - gap).
 	form getCanvas
-		fillColor: Color transparent;
-		paintImage: form1 at: form1 offset - (left @ top);
-		paintImage: form2
-		at: form2 offset - (left @ top) + (form1 width @ 0).
+		fillColor: Color white;
+		paintImage: form1 at: 0 @ gap;
+		paintImage: form2 at: form1 width @ 0.
 	^ form
 ]
 
@@ -167,23 +168,18 @@ MicMicroMathInlineBlock >> image: form1 fraction: form2 [
 { #category : 'rendering' }
 MicMicroMathInlineBlock >> image: form1 suffix: originalForm2 [
 
-	| form2 rect1 rect2 left top bottom right form |
-	form2 := originalForm2 magnifyBy: 0.8.
-	rect1 := form1 offset extent: form1 extent.
-	rect2 := originalForm2 offset * 0.8 + (0 @ rect1 bottom) extent:
-		         form2 extent.
-	form2 offset: rect2 origin.
-	left := rect1 left.
-	right := rect1 right + form2 width.
-	top := rect1 top min: rect2 top.
-	bottom := rect1 bottom max: rect2 bottom.
-	form := Form extent: right - left @ (bottom - top) depth: 32.
-	form offset: left @ top.
+	| scale form2 gap form |
+	scale := form1 height * 1.2 / originalForm2 height min: 0.8.
+	form2 := originalForm2 magnifyBy: scale.
+	gap := form2 height * 0.2.
+	form := Form
+		        extent: form1 width + form2 width @ (form1 height + gap)
+		        depth: 32.
+	form offset: 0 @ (form1 offset y - gap).
 	form getCanvas
-		fillColor: Color transparent;
-		paintImage: form1 at: form1 offset - (left @ top);
-		paintImage: form2
-		at: form2 offset - (left @ top) + (form1 width @ 0).
+		fillColor: Color white;
+		paintImage: form1 at: 0 @ 0;
+		paintImage: form2 at: form1 width @ (form height - form2 height).
 	^ form
 ]
 
@@ -210,6 +206,32 @@ MicMicroMathInlineBlock >> imagePlain: aString [
 			  (Form extent: 0 @ TextStyle defaultFont height depth: 32)
 				  offset: 0 @ TextStyle defaultFont ascent negated;
 				  yourself ]
+]
+
+{ #category : 'rendering' }
+MicMicroMathInlineBlock >> imageSqrt: aForm [
+
+	| rect image |
+	rect := aForm offset extent: aForm extent + (10 @ 2).
+	image := Form extent: rect extent depth: 32.
+	image getCanvas
+		fillColor: Color white;
+		drawImage: aForm at: 10 @ 1;
+		line: 1 @ (rect height - 8)
+		to: 4 @ (rect height - 4)
+		width: 2.5
+		color: Color black;
+		line: 4 @ (rect height - 4)
+		to: 10 @ 0
+		width: 1.5
+		color: Color black;
+		line: 10 @ 0
+		to: rect width @ 0
+		width: 1.5
+		color: Color black.
+	^ image
+		  offset: aForm offset - (0 @ 2);
+		  yourself
 ]
 
 { #category : 'processing' }
@@ -328,7 +350,24 @@ MicMicroMathInlineBlock >> processOne [
 	^ self processBrace or: [
 		  self processSuffix or: [
 			  self processExponent or: [
-				  self processFraction or: [ self processConcatenate ] ] ] ]
+				  self processFraction or: [
+					  self processSqrt or: [ self processConcatenate ] ] ] ] ]
+]
+
+{ #category : 'processing' }
+MicMicroMathInlineBlock >> processSqrt [
+	"replace (#sqrt image) pattern in imagesAndTokens with the composed image and answers true if applied"
+
+	1 to: imagesAndTokens size - 1 do: [ :index |
+		| sqrt image |
+		sqrt := imagesAndTokens at: index.
+		image := imagesAndTokens at: index + 1.
+		(sqrt = #sqrt and: [ image isForm ]) ifTrue: [
+			imagesAndTokens := (imagesAndTokens first: index - 1)
+			                   , { (self imageSqrt: image) }
+			                   , (imagesAndTokens allButFirst: index + 1).
+			^ true ] ].
+	^ false
 ]
 
 { #category : 'processing' }
