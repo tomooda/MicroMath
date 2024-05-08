@@ -24,7 +24,8 @@ Class {
 	#superclass : 'MicInlineElement',
 	#instVars : [
 		'keywords',
-		'imagesAndTokens'
+		'imagesAndTokens',
+		'font'
 	],
 	#category : 'Microdown-MicroMath-ModelInline',
 	#package : 'Microdown-MicroMath',
@@ -75,6 +76,12 @@ MicMicroMathInlineBlock >> defaultKeywords [
 MicMicroMathInlineBlock >> emptyImage [
 
 	^ self imagePlain: ''
+]
+
+{ #category : 'accessing' }
+MicMicroMathInlineBlock >> font [
+
+	^ font ifNil: [ font := TextStyle defaultFont emphasized: 2 ]
 ]
 
 { #category : 'accessing' }
@@ -144,8 +151,7 @@ MicMicroMathInlineBlock >> image: form1 fraction: form2 [
 		        extent: width @ (height1 + height2 + (gapHeight * 2) + 1)
 		        depth: 32.
 	form offset:
-		0 @ (height1 + gapHeight + 1 + (TextStyle defaultFont ascent // 8))
-			negated.
+		0 @ (height1 + gapHeight + 1 + (self font ascent // 8)) negated.
 	form getCanvas
 		fillColor: Color transparent;
 		paintImage: form1 at: width - width1 // 2 @ 0;
@@ -186,9 +192,18 @@ MicMicroMathInlineBlock >> imagePlain: aString [
 
 	^ aString
 		  ifNotEmpty: [
-			  ((aString asText addAttribute: TextEmphasis italic) asMorph
-				   backgroundColor: Color white;
-				   asForm)
+			  | image |
+			  image := Form
+				           extent:
+				           (self font widthOfString: aString) @ self font height
+				           depth: 32.
+			  image getCanvas
+				  fillColor: Color white;
+				  drawString: aString
+				  at: 0 @ 0
+				  font: self font
+				  color: Color black.
+			  image
 				  offset: 0 @ TextStyle defaultFont ascent negated;
 				  yourself ]
 		  ifEmpty: [
